@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JW Companion</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3d3424">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="JW Companion">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="description" content="A spiritual companion app for Jehovah's Witnesses.">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #f5f1ea;
+    --warm-white: #faf8f3;
+    --gold: #a07840;
+    --gold-light: #c49a5a;
+    --deep: #18180f;
+    --bark: #3d3424;
+    --muted: #6e6454;
+    --border: rgba(160,120,64,0.22);
+    --scripture-bg: rgba(160,120,64,0.09);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Jost', sans-serif;
+    background: var(--cream);
+    color: var(--deep);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 15% 5%, rgba(160,120,64,0.06) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 70% at 90% 90%, rgba(61,52,36,0.05) 0%, transparent 55%);
+    pointer-events: none; z-index: 0;
+  }
+
+  header {
+    position: relative; z-index: 10;
+    padding: 0 40px; height: 62px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--warm-white); flex-shrink: 0;
+  }
+  .wordmark {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.45rem; font-weight: 600;
+    color: var(--bark); letter-spacing: 0.03em;
+  }
+  .wordmark span { color: var(--gold); }
+  nav { display: flex; gap: 4px; }
+  nav button {
+    background: none; border: 1px solid transparent;
+    padding: 6px 15px; border-radius: 18px;
+    font-family: 'Jost', sans-serif;
+    font-size: 0.76rem; font-weight: 400;
+    color: var(--muted); cursor: pointer;
+    letter-spacing: 0.07em; text-transform: uppercase;
+    transition: all 0.18s;
+  }
+  nav button:hover { color: var(--bark); border-color: var(--border); }
+  nav button.active { background: var(--bark); color: var(--cream); border-color: var(--bark); }
+
+  main { position: relative; z-index: 5; flex: 1; display: flex; flex-direction: column; }
+  .view { display: none; flex: 1; flex-direction: column; }
+  .view.active { display: flex; }
+
+  /* Daily Text */
+  .daily-banner {
+    background: var(--bark); color: var(--cream);
+    padding: 14px 40px;
+    display: flex; align-items: flex-start; gap: 20px;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(0,0,0,0.15);
+  }
+  .daily-label {
+    font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--gold-light); font-weight: 500;
+    flex-shrink: 0; padding-top: 2px; min-width: 80px;
+  }
+  .daily-content { flex: 1; }
+  .daily-verse {
+    font-family: 'Cormorant Garamond', serif; font-style: italic;
+    font-size: 0.92rem; line-height: 1.55; color: rgba(250,248,243,0.9);
+  }
+  .daily-ref { font-size: 0.7rem; color: var(--gold-light); margin-top: 4px; letter-spacing: 0.06em; }
+  .daily-reflection { font-size: 0.78rem; color: rgba(250,248,243,0.7); margin-top: 6px; line-height: 1.55; }
+  .daily-loading { font-size: 0.8rem; color: rgba(250,248,243,0.5); font-style: italic; }
+  .daily-refresh {
+    background: none; border: 1px solid rgba(196,154,90,0.4);
+    color: var(--gold-light); font-family: 'Jost', sans-serif;
+    font-size: 0.7rem; padding: 5px 12px; border-radius: 12px;
+    cursor: pointer; letter-spacing: 0.06em;
+    flex-shrink: 0; transition: all 0.18s; align-self: center;
+  }
+  .daily-refresh:hover { background: rgba(196,154,90,0.15); }
+
+  /* Companion */
+  #view-companion {
+    max-width: 760px; margin: 0 auto; width: 100%;
+    padding: 28px 24px 0; flex: 1; display: flex; flex-direction: column;
+  }
+  .mode-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .mode-btn {
+    border: 1px solid var(--border); background: var(--warm-white);
+    padding: 8px 18px; border-radius: 22px;
+    font-family: 'Jost', sans-serif; font-size: 0.75rem;
+    color: var(--muted); cursor: pointer; transition: all 0.18s;
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .mode-btn.active { background: var(--gold); color: white; border-color: var(--gold); font-weight: 500; }
+  .mode-desc {
+    font-family: 'Cormorant Garamond', serif; font-style: italic;
+    font-size: 0.9rem; color: var(--muted); margin-bottom: 16px; min-height: 1.2em;
+  }
+
+  /* Search bar */
+  .search-bar { display: flex; gap: 8px; margin-bottom: 14px; }
+  .search-bar input {
+    flex: 1; border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 15px; font-family: 'Jost', sans-serif;
+    font-size: 0.83rem; color: var(--deep); background: var(--warm-white);
+    outline: none; transition: border-color 0.18s;
+  }
+  .search-bar input:focus { border-color: var(--gold-light); }
+  .search-bar input::placeholder { color: var(--muted); }
+  .search-btn {
+    border: 1px solid var(--border); background: var(--warm-white);
+    border-radius: 10px; padding: 10px 16px;
+    font-family: 'Jost', sans-serif; font-size: 0.75rem;
+    color: var(--muted); cursor: pointer; letter-spacing: 0.05em;
+    transition: all 0.18s; white-space: nowrap;
+  }
+  .search-btn:hover { background: var(--bark); color: var(--cream); border-color: var(--bark); }
+
+  .search-result-panel {
+    background: var(--scripture-bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 16px; margin-bottom: 12px;
+    font-size: 0.81rem; color: var(--bark); line-height: 1.65; display: none;
+  }
+  .search-result-panel.visible { display: block; }
+  .sr-label { font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin-bottom: 6px; }
+
+  /* Chat */
+  .chat-window {
+    background: var(--warm-white); border: 1px solid var(--border);
+    border-radius: 14px; flex: 1;
+    min-height: 300px; max-height: 400px;
+    overflow-y: auto; padding: 22px;
+    display: flex; flex-direction: column; gap: 16px;
+    scroll-behavior: smooth;
+  }
+  .chat-window::-webkit-scrollbar { width: 3px; }
+  .chat-window::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .msg { display: flex; gap: 10px; animation: fadeUp 0.3s ease; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .msg.user { flex-direction: row-reverse; }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem; font-weight: 600;
+    flex-shrink: 0; margin-top: 2px; letter-spacing: 0.02em;
+  }
+  .avatar.ai { background: var(--bark); color: var(--cream); }
+  .avatar.user { background: var(--gold); color: white; }
+  .bubble {
+    max-width: 82%; padding: 12px 15px; border-radius: 13px;
+    font-size: 0.85rem; line-height: 1.72; color: var(--deep);
+  }
+  .msg.ai .bubble { background: #ece6d8; border-bottom-left-radius: 3px; }
+  .msg.user .bubble { background: var(--bark); color: var(--cream); border-bottom-right-radius: 3px; }
+  .scripture-block {
+    display: block; margin-top: 10px; padding: 10px 14px;
+    background: rgba(160,120,64,0.13); border-left: 3px solid var(--gold);
+    border-radius: 6px; font-family: 'Cormorant Garamond', serif;
+    font-style: italic; font-size: 0.92rem; color: var(--bark); line-height: 1.5;
+  }
+  .typing-indicator {
+    display: flex; gap: 5px; align-items: center;
+    padding: 12px 15px; background: #ece6d8;
+    border-radius: 13px; border-bottom-left-radius: 3px; width: fit-content;
+  }
+  .dot { width: 6px; height: 6px; background: var(--muted); border-radius: 50%; animation: bounce 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    0%,80%,100% { transform: translateY(0); opacity: 0.4; }
+    40% { transform: translateY(-5px); opacity: 1; }
+  }
+
+  .chat-input-row { display: flex; gap: 8px; margin-top: 12px; padding-bottom: 24px; }
+  .chat-input-row textarea {
+    flex: 1; resize: none; border: 1px solid var(--border); border-radius: 11px;
+    padding: 12px 15px; font-family: 'Jost', sans-serif; font-size: 0.85rem;
+    color: var(--deep); background: var(--warm-white); outline: none;
+    line-height: 1.5; min-height: 48px; max-height: 120px; transition: border-color 0.18s;
+  }
+  .chat-input-row textarea:focus { border-color: var(--gold-light); }
+  .chat-input-row textarea::placeholder { color: var(--muted); }
+  .send-btn {
+    width: 48px; height: 48px; border-radius: 11px; background: var(--bark);
+    border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: background 0.18s, transform 0.1s;
+  }
+  .send-btn:hover { background: var(--gold); }
+  .send-btn:active { transform: scale(0.94); }
+  .send-btn svg { stroke: white; }
+
+  /* Journal */
+  #view-journal {
+    max-width: 720px; margin: 0 auto; width: 100%;
+    padding: 28px 24px 40px; flex: 1; display: flex; flex-direction: column;
+  }
+  .section-heading {
+    font-family: 'Cormorant Garamond', serif; font-size: 1.5rem;
+    font-weight: 400; color: var(--bark); margin-bottom: 3px;
+  }
+  .section-sub {
+    font-size: 0.72rem; color: var(--muted);
+    letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 22px;
+  }
+
+  .journal-toolbar { display: flex; gap: 8px; margin-bottom: 18px; }
+  .journal-toolbar input {
+    flex: 1; border: 1px solid var(--border); border-radius: 10px;
+    padding: 9px 14px; font-family: 'Jost', sans-serif; font-size: 0.82rem;
+    color: var(--deep); background: var(--warm-white); outline: none; transition: border-color 0.18s;
+  }
+  .journal-toolbar input:focus { border-color: var(--gold-light); }
+  .journal-toolbar input::placeholder { color: var(--muted); }
+  .export-btn {
+    border: 1px solid var(--border); background: var(--warm-white);
+    border-radius: 10px; padding: 9px 15px;
+    font-family: 'Jost', sans-serif; font-size: 0.72rem;
+    color: var(--muted); cursor: pointer; letter-spacing: 0.07em;
+    text-transform: uppercase; transition: all 0.18s; white-space: nowrap;
+  }
+  .export-btn:hover { background: var(--bark); color: var(--cream); border-color: var(--bark); }
+
+  .journal-compose {
+    background: var(--warm-white); border: 1px solid var(--border);
+    border-radius: 14px; padding: 22px; margin-bottom: 22px;
+  }
+  .journal-compose input[type="text"] {
+    width: 100%; border: none; border-bottom: 1px solid var(--border);
+    padding: 6px 0 11px; font-family: 'Cormorant Garamond', serif;
+    font-size: 1.2rem; color: var(--bark); background: transparent; outline: none; margin-bottom: 14px;
+  }
+  .journal-compose input::placeholder { color: var(--muted); font-style: italic; }
+  .journal-tags { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 13px; }
+  .tag-btn {
+    border: 1px solid var(--border); background: none; padding: 4px 12px;
+    border-radius: 13px; font-size: 0.7rem; color: var(--muted);
+    cursor: pointer; letter-spacing: 0.05em; transition: all 0.15s; font-family: 'Jost', sans-serif;
+  }
+  .tag-btn.selected { background: var(--gold); color: white; border-color: var(--gold); }
+  .journal-compose textarea {
+    width: 100%; min-height: 90px; border: none; outline: none;
+    background: transparent; font-family: 'Jost', sans-serif;
+    font-size: 0.86rem; color: var(--deep); line-height: 1.8; resize: none;
+  }
+  .journal-compose textarea::placeholder { color: var(--muted); }
+  .journal-actions {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);
+  }
+  .date-label { font-size: 0.73rem; color: var(--muted); font-style: italic; }
+  .save-btn {
+    background: var(--bark); color: var(--cream); border: none;
+    padding: 9px 22px; border-radius: 20px; font-family: 'Jost', sans-serif;
+    font-size: 0.78rem; font-weight: 500; letter-spacing: 0.08em;
+    cursor: pointer; transition: background 0.18s;
+  }
+  .save-btn:hover { background: var(--gold); }
+
+  .entries-list { display: flex; flex-direction: column; gap: 11px; }
+  .entry-card {
+    background: var(--warm-white); border: 1px solid var(--border);
+    border-radius: 12px; padding: 17px 20px;
+    transition: box-shadow 0.18s, transform 0.15s;
+    animation: fadeUp 0.28s ease; position: relative;
+  }
+  .entry-card:hover { box-shadow: 0 3px 14px rgba(61,52,36,0.09); transform: translateY(-1px); }
+  .entry-meta { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .entry-title { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; color: var(--bark); font-weight: 600; }
+  .entry-date { font-size: 0.7rem; color: var(--muted); }
+  .entry-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 6px; }
+  .entry-tag {
+    font-size: 0.63rem; background: var(--scripture-bg); color: var(--gold);
+    padding: 2px 8px; border-radius: 9px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .entry-preview { font-size: 0.8rem; color: var(--muted); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .entry-delete {
+    position: absolute; top: 13px; right: 14px;
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 0.72rem;
+    opacity: 0; transition: opacity 0.15s; padding: 2px 6px; border-radius: 5px;
+    font-family: 'Jost', sans-serif;
+  }
+  .entry-card:hover .entry-delete { opacity: 1; }
+  .entry-delete:hover { color: #7a3232; background: rgba(139,58,58,0.08); }
+
+  .empty-state { text-align: center; padding: 40px 24px; color: var(--muted); }
+  .empty-state p:first-child { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1rem; margin-bottom: 8px; }
+  .empty-state p:last-child { font-size: 0.76rem; letter-spacing: 0.07em; }
+
+  .api-error {
+    background: rgba(139,58,58,0.07); border: 1px solid rgba(139,58,58,0.2);
+    border-radius: 9px; padding: 10px 14px; font-size: 0.8rem; color: #7a3232; margin: 6px 0;
+  }
+
+  /* Install banner */
+  #installBanner {
+    display: none;
+    background: var(--gold);
+    color: white;
+    padding: 10px 20px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+    z-index: 20;
+    position: relative;
+  }
+  #installBanner p { flex: 1; letter-spacing: 0.03em; }
+  #installBtn {
+    background: white; color: var(--gold);
+    border: none; padding: 6px 16px; border-radius: 14px;
+    font-family: 'Jost', sans-serif; font-size: 0.75rem;
+    font-weight: 600; cursor: pointer; white-space: nowrap;
+    letter-spacing: 0.05em;
+  }
+  #dismissInstall {
+    background: none; border: none; color: rgba(255,255,255,0.7);
+    cursor: pointer; font-size: 1.1rem; padding: 0 4px; line-height: 1;
+  }
+
+  @media (max-width: 600px) {
+    header { padding: 0 18px; }
+    .daily-banner { padding: 12px 18px; }
+    #view-companion, #view-journal { padding: 16px 14px 0; }
+    .chat-window { padding: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark">JW <span>Companion</span></div>
+  <nav>
+    <button class="active" onclick="switchView('companion', this)">Companion</button>
+    <button onclick="switchView('journal', this)">Journal</button>
+  </nav>
+</header>
+
+<!-- Install Banner (shown on Android/desktop when installable) -->
+<div id="installBanner">
+  <p>Add JW Companion to your home screen for the full app experience.</p>
+  <button id="installBtn">Install</button>
+  <button id="dismissInstall" title="Dismiss">&times;</button>
+</div>
+
+<!-- Daily Text Banner -->
+<div class="daily-banner">
+  <div class="daily-label">Daily Text</div>
+  <div class="daily-content" id="dailyContent">
+    <div class="daily-loading">Loading today's text...</div>
+  </div>
+  <button class="daily-refresh" onclick="loadDailyText()">Refresh</button>
+</div>
+
+<main>
+
+  <!-- COMPANION -->
+  <div id="view-companion" class="view active">
+    <div class="mode-row">
+      <button class="mode-btn active" onclick="setMode('vent', this)">I Need to Share</button>
+      <button class="mode-btn" onclick="setMode('study', this)">Study Help</button>
+      <button class="mode-btn" onclick="setMode('encourage', this)">Encourage Me</button>
+    </div>
+    <div class="mode-desc" id="modeDesc">Share what is on your heart. This is a safe space.</div>
+
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Search JW.org publications, topics, or scriptures..." onkeydown="if(event.key==='Enter') runSearch()">
+      <button class="search-btn" onclick="runSearch()">Search JW.org</button>
+    </div>
+    <div class="search-result-panel" id="searchPanel">
+      <div class="sr-label">JW.org Search Result</div>
+      <div id="searchResultText"></div>
+    </div>
+
+    <div class="chat-window" id="chatWindow">
+      <div class="msg ai">
+        <div class="avatar ai">JW</div>
+        <div class="bubble">
+          Peace to you. This is a private space grounded in Jehovah's Word — feel free to share whatever is on your heart, ask a spiritual question, or simply find encouragement. What would you like to talk about today?
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-input-row">
+      <textarea id="chatInput" placeholder="Type your message..." rows="1"
+        onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" onclick="sendMessage()" title="Send">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- JOURNAL -->
+  <div id="view-journal" class="view">
+    <div class="section-heading">Spiritual Journal</div>
+    <div class="section-sub">Personal reflections &amp; growth</div>
+
+    <div class="journal-toolbar">
+      <input type="text" placeholder="Search your entries..." oninput="filterEntries(this.value)">
+      <button class="export-btn" onclick="exportJournal()">Export Journal</button>
+    </div>
+
+    <div class="journal-compose">
+      <input type="text" id="journalTitle" placeholder="Title your reflection..." maxlength="80">
+      <div class="journal-tags">
+        <button class="tag-btn" onclick="toggleTag(this,'Prayer')">Prayer</button>
+        <button class="tag-btn" onclick="toggleTag(this,'Study')">Study</button>
+        <button class="tag-btn" onclick="toggleTag(this,'Field Service')">Field Service</button>
+        <button class="tag-btn" onclick="toggleTag(this,'Meeting')">Meeting</button>
+        <button class="tag-btn" onclick="toggleTag(this,'Personal Struggle')">Personal Struggle</button>
+        <button class="tag-btn" onclick="toggleTag(this,'Gratitude')">Gratitude</button>
+        <button class="tag-btn" onclick="toggleTag(this,'Scripture')">Scripture</button>
+      </div>
+      <textarea id="journalBody" placeholder="Write your thoughts freely. This is your private space..." rows="4"></textarea>
+      <div class="journal-actions">
+        <span class="date-label" id="currentDate"></span>
+        <button class="save-btn" onclick="saveEntry()">Save Entry</button>
+      </div>
+    </div>
+
+    <div class="entries-list" id="entriesList"></div>
+  </div>
+
+</main>
+
+<script>
+let currentMode = 'vent';
+let chatHistory = [];
+let journalEntries = JSON.parse(localStorage.getItem('jwc_journal') || '[]');
+let selectedTags = [];
+let isLoading = false;
+
+const modeDescs = {
+  vent: 'Share what is on your heart. This is a safe space.',
+  study: 'Ask a spiritual question or bring a scripture you are pondering.',
+  encourage: "Tell me what you are going through — let us find encouragement in Jehovah's Word."
+};
+
+const modePrompts = {
+  vent: `You are a warm, spiritually mature companion for Jehovah's Witnesses. The user wants to vent or share something weighing on them.
+
+Your role is like a trusted fellow Witness — not a clinical therapist, but a caring friend grounded in Jehovah's Word.
+
+Guidelines:
+- Lead with empathy. Reflect their feelings. Do not minimize pain.
+- Respond as a spiritually mature Witness would — warm, human, real.
+- Ground comfort in NWT scriptures, Watchtower principles, and JW teachings.
+- Acknowledge the real challenges of Witness life — spiritual warfare, family situations, congregation difficulties, opposition.
+- Reference JW.org or Watchtower topics by concept only — never fabricate specific citations or page numbers.
+- Format any scripture exactly like this: [SCRIPTURE]Verse text — Book Chapter:Verse[/SCRIPTURE]
+- Keep responses to 2–4 conversational paragraphs. Do not be preachy.
+- Affirm Jehovah's personal love for them. Remind them they are not alone.`,
+
+  study: `You are a knowledgeable JW study companion grounded in Jehovah's Witnesses' beliefs, the NWT, and Watchtower publications.
+
+Guidelines:
+- Answer using NWT scriptures, Watchtower/Awake! principles, JW.org content, and JW Library publications.
+- Align answers with current JW understanding and the organization's position.
+- Be honest when a topic is nuanced — point toward Jehovah's guidance through the faithful and discreet slave.
+- Format scriptures: [SCRIPTURE]Verse text — Book Chapter:Verse[/SCRIPTURE]
+- Suggest relevant publication topics (Insight on the Scriptures, "What Does the Bible Really Teach?", Watchtower study articles) when helpful.
+- Be scholarly but warm, not robotic.`,
+
+  encourage: `You are a gentle, faith-filled encourager for Jehovah's Witnesses who may be spiritually struggling.
+
+Guidelines:
+- Your tone is loving and uplifting, like a caring spiritual family member.
+- Find genuine scriptural hope for whatever they share.
+- Reference the beautiful hope ahead — the new world, resurrection, Jehovah's promises.
+- Remind them of their personal worth to Jehovah. He knows them by name.
+- Include 1–2 scriptures: [SCRIPTURE]Verse text — Book Chapter:Verse[/SCRIPTURE]
+- Be specific to what they shared — not generic.`
+};
+
+// DAILY TEXT
+async function loadDailyText() {
+  const el = document.getElementById('dailyContent');
+  el.innerHTML = '<div class="daily-loading">Loading today\'s text...</div>';
+  const today = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `You provide a daily scripture text in the style used by Jehovah's Witnesses. Respond ONLY with valid JSON, no extra text, no markdown:
+{"verse":"The full verse text in NWT wording","reference":"Book Chapter:Verse","reflection":"2-3 sentence warm reflection in Watchtower style."}`,
+        messages: [{ role: 'user', content: `Today is ${today}. Provide a meaningful daily text scripture and brief reflection for a Jehovah's Witness.` }]
+      })
+    });
+    const data = await res.json();
+    const raw = (data.content?.[0]?.text || '{}').replace(/```json|```/g, '').trim();
+    const p = JSON.parse(raw);
+    el.innerHTML = `
+      <div class="daily-verse">"${esc(p.verse)}"</div>
+      <div class="daily-ref">${esc(p.reference)}</div>
+      <div class="daily-reflection">${esc(p.reflection)}</div>`;
+  } catch(e) {
+    el.innerHTML = '<div class="daily-loading">Could not load today\'s text. Press Refresh to try again.</div>';
+  }
+}
+
+// JW.ORG SEARCH
+async function runSearch() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) return;
+  const panel = document.getElementById('searchPanel');
+  const resultEl = document.getElementById('searchResultText');
+  panel.classList.add('visible');
+  resultEl.textContent = 'Searching...';
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        system: `You are a JW research assistant. Search JW.org, Watchtower Online Library, and JW Library publication topics for the query. Summarize the most relevant finding in 3–5 clear sentences. Reference publication names and relevant NWT scriptures where appropriate. Stay fully faithful to the organization's published teachings.`,
+        messages: [{ role: 'user', content: `Search JW.org publications and resources for: "${q}"` }]
+      })
+    });
+    const data = await res.json();
+    const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+    resultEl.textContent = text || 'No results found. Try a different search.';
+  } catch(e) {
+    resultEl.textContent = 'Search error: ' + e.message;
+  }
+}
+
+// CHAT
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+function appendMsg(role, html) {
+  const win = document.getElementById('chatWindow');
+  const div = document.createElement('div'); div.className = 'msg ' + role;
+  const av = document.createElement('div'); av.className = 'avatar ' + role;
+  av.textContent = role === 'ai' ? 'JW' : 'You';
+  const bub = document.createElement('div'); bub.className = 'bubble'; bub.innerHTML = html;
+  div.appendChild(av); div.appendChild(bub); win.appendChild(div);
+  win.scrollTop = win.scrollHeight;
+}
+function showTyping() {
+  const win = document.getElementById('chatWindow');
+  const div = document.createElement('div'); div.className = 'msg ai'; div.id = 'typingMsg';
+  const av = document.createElement('div'); av.className = 'avatar ai'; av.textContent = 'JW';
+  const ind = document.createElement('div'); ind.className = 'typing-indicator';
+  ind.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+  div.appendChild(av); div.appendChild(ind); win.appendChild(div);
+  win.scrollTop = win.scrollHeight;
+}
+function removeTyping() { const t = document.getElementById('typingMsg'); if (t) t.remove(); }
+
+function formatReply(text) {
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\[SCRIPTURE\](.*?)\[\/SCRIPTURE\]/gs, (_,c) => `<span class="scripture-block">${c.trim()}</span>`);
+}
+
+async function sendMessage() {
+  if (isLoading) return;
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim(); if (!text) return;
+  input.value = ''; input.style.height = 'auto'; isLoading = true;
+  appendMsg('user', esc(text));
+  chatHistory.push({ role: 'user', content: text });
+  showTyping();
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: modePrompts[currentMode],
+        messages: chatHistory
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const reply = data.content?.[0]?.text || 'Something went wrong. Please try again.';
+    chatHistory.push({ role: 'assistant', content: reply });
+    removeTyping();
+    appendMsg('ai', formatReply(reply));
+  } catch(err) {
+    removeTyping();
+    const e = document.createElement('div'); e.className = 'api-error';
+    e.textContent = 'Error: ' + err.message;
+    document.getElementById('chatWindow').appendChild(e);
+  }
+  isLoading = false;
+}
+
+// VIEW / MODE
+function switchView(id, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'journal') renderEntries();
+}
+function setMode(mode, btn) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('modeDesc').textContent = modeDescs[mode];
+}
+
+// JOURNAL
+function toggleTag(btn, tag) {
+  btn.classList.toggle('selected');
+  selectedTags = btn.classList.contains('selected') ? [...selectedTags, tag] : selectedTags.filter(t => t !== tag);
+}
+function saveEntry() {
+  const title = document.getElementById('journalTitle').value.trim();
+  const body = document.getElementById('journalBody').value.trim();
+  if (!title && !body) return;
+  const entry = {
+    id: Date.now(),
+    title: title || 'Untitled Reflection', body,
+    tags: [...selectedTags],
+    date: new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })
+  };
+  journalEntries.unshift(entry);
+  localStorage.setItem('jwc_journal', JSON.stringify(journalEntries));
+  document.getElementById('journalTitle').value = '';
+  document.getElementById('journalBody').value = '';
+  document.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('selected'));
+  selectedTags = [];
+  renderEntries();
+}
+function deleteEntry(id, ev) {
+  ev.stopPropagation();
+  if (!confirm('Delete this entry?')) return;
+  journalEntries = journalEntries.filter(e => e.id !== id);
+  localStorage.setItem('jwc_journal', JSON.stringify(journalEntries));
+  renderEntries();
+}
+function filterEntries(q) {
+  const lq = q.toLowerCase();
+  const list = lq ? journalEntries.filter(e =>
+    e.title.toLowerCase().includes(lq) ||
+    e.body.toLowerCase().includes(lq) ||
+    e.tags.some(t => t.toLowerCase().includes(lq))
+  ) : journalEntries;
+  renderEntries(list);
+}
+function renderEntries(list) {
+  const entries = list !== undefined ? list : journalEntries;
+  const el = document.getElementById('entriesList');
+  if (!entries.length) {
+    el.innerHTML = `<div class="empty-state"><p>"Let your petitions be made known to God."</p><p>Your journal entries will appear here</p></div>`;
+    return;
+  }
+  el.innerHTML = entries.map(e => `
+    <div class="entry-card">
+      <button class="entry-delete" onclick="deleteEntry(${e.id}, event)">Delete</button>
+      <div class="entry-meta">
+        <span class="entry-title">${esc(e.title)}</span>
+        <span class="entry-date">${e.date}</span>
+      </div>
+      ${e.tags.length ? `<div class="entry-tags">${e.tags.map(t=>`<span class="entry-tag">${t}</span>`).join('')}</div>` : ''}
+      <div class="entry-preview">${esc(e.body)}</div>
+    </div>`).join('');
+}
+
+// EXPORT
+function exportJournal() {
+  if (!journalEntries.length) { alert('No journal entries to export yet.'); return; }
+  let txt = 'JW COMPANION — SPIRITUAL JOURNAL\n';
+  txt += 'Exported: ' + new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' }) + '\n';
+  txt += '='.repeat(50) + '\n\n';
+  journalEntries.forEach(e => {
+    txt += `${e.title}\n${e.date}`;
+    if (e.tags.length) txt += ' | ' + e.tags.join(', ');
+    txt += '\n' + '-'.repeat(40) + '\n' + e.body + '\n\n';
+  });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain' }));
+  a.download = 'jw-companion-journal.txt'; a.click();
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// REGISTER SERVICE WORKER
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+
+// INSTALL PROMPT
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const banner = document.getElementById('installBanner');
+  if (banner) banner.style.display = 'flex';
+});
+document.addEventListener('click', e => {
+  if (e.target.id === 'installBtn' && deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => {
+      deferredPrompt = null;
+      const banner = document.getElementById('installBanner');
+      if (banner) banner.style.display = 'none';
+    });
+  }
+  if (e.target.id === 'dismissInstall') {
+    const banner = document.getElementById('installBanner');
+    if (banner) banner.style.display = 'none';
+  }
+});
+
+// INIT
+document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', {
+  weekday:'long', year:'numeric', month:'long', day:'numeric'
+});
+renderEntries();
+loadDailyText();
+</script>
+</body>
+</html>
