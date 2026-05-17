@@ -2,7 +2,8 @@
   "name": "JW Companion",
   "short_name": "JW Companion",
   "description": "A spiritual companion app for Jehovah's Witnesses — chat support, daily text, and personal journal.",
-  "start_url": "/",
+  "start_url": "/jamesbearden043.github.io/",
+  "scope": "/jamesbearden043.github.io/"
   "display": "standalone",
   "background_color": "#f5f1ea",
   "theme_color": "#3d3424",
